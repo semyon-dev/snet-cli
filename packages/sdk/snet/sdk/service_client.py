@@ -2,7 +2,10 @@ import base64
 import collections
 import importlib
 
+import eth_utils
 import grpc
+import web3
+
 import snet.sdk.generic_client_interceptor as generic_client_interceptor
 from eth_account.messages import defunct_hash_message
 from rfc3986 import urlparse
@@ -149,6 +152,12 @@ class ServiceClient:
         return self.group["pricing"][0]["price_in_cogs"]
 
     def generate_signature(self, message):
+        signature = bytes(self.sdk_web3.eth.account.signHash(defunct_hash_message(message),
+                                                             self.account.signer_private_key).signature)
+
+        return signature
+
+    def generate_training_signature(self, message):
         signature = bytes(self.sdk_web3.eth.account.signHash(defunct_hash_message(message),
                                                              self.account.signer_private_key).signature)
 
