@@ -1,17 +1,23 @@
 import base64
+import codecs
 import collections
 import importlib
 
 import eth_utils
+import hashlib
+import ecdsa
+import codecs
 import grpc
 import web3
+from eth_account import Account
 
 import snet.sdk.generic_client_interceptor as generic_client_interceptor
-from eth_account.messages import defunct_hash_message
+from eth_account.messages import defunct_hash_message, encode_defunct
 from rfc3986 import urlparse
 from snet.sdk.mpe.payment_channel_provider import PaymentChannelProvider
 from snet.snet_cli.utils.utils import RESOURCES_PATH, add_to_path
 from snet.sdk.root_certificate import root_certificate
+
 
 class _ClientCallDetails(
     collections.namedtuple(
@@ -72,7 +78,8 @@ class ServiceClient:
         if endpoint_object.scheme == "http":
             return grpc.insecure_channel(channel_endpoint)
         elif endpoint_object.scheme == "https":
-            return grpc.secure_channel(channel_endpoint, grpc.ssl_channel_credentials(root_certificates=root_certificate))
+            return grpc.secure_channel(channel_endpoint,
+                                       grpc.ssl_channel_credentials(root_certificates=root_certificate))
         else:
             raise ValueError('Unsupported scheme in service metadata ("{}")'.format(endpoint_object.scheme))
 
@@ -157,11 +164,47 @@ class ServiceClient:
 
         return signature
 
-    def generate_training_signature(self, message):
-        signature = bytes(self.sdk_web3.eth.account.signHash(defunct_hash_message(message),
-                                                             self.account.signer_private_key).signature)
+    # Функция для создания подписи
+    def generate_training_signature2(self, text, address,  block_number):
+        message = web3.Web3.solidity_keccak(
+            ["string", "uint256"],
+            [text, block_number]
+        )
+        signature = self.sdk_web3.eth.account.signHash(defunct_hash_message(message),
+                                                       self.account.signer_private_key).signature
 
+        # Создание подписи
+        from eth_account.messages import encode_defunct
+        # msghash = encode_defunct(text=text)
+        print("MSG HASH: ", message)
+        print("self.account.signer_private_key: ", self.account.signer_private_key)
+        # signed_msg = Account.sign_message(message, self.account.signer_private_key)
+        # print("signed_msg: ", signed_msg)
+
+        # Получение подписи
+        # self.account.signer_private_key
+        # signed_message = self.sdk_web3.eth.account.sign_message(signed_msg, private_key=self.account.signer_private_key)
         return signature
+
+    # def generate_training_signature(self, message, block_number, private_key_str: str):
+    #     # Преобразование строки в байты
+    #     private_key_bytes = codecs.decode(private_key_str, 'hex')
+    #
+    #     # Используем кривую secp256k1 (стандартная кривая для Ethereum)
+    #     curve = ecdsa.curves.SECP256k1
+    #
+    #     # Создаем объект приватного ключа
+    #     private_key = ecdsa.SigningKey.from_string(private_key_bytes, curve=curve)
+    #
+    #     message = b"".join([
+    #         message.encode('utf-8'),
+    #         private_key.get_verifying_key().to_string('compressed'),
+    #         block_number.to_bytes(32, byteorder='big')  # Используем 32 байта для номера блока
+    #     ])
+    #     hash_message = hashlib.sha3_256(message).digest()
+    #     signature = private_key.sign_digest(hash_message, sigencode=ecdsa.util.sigencode_der_canonize)
+    #
+    #     return signature, message.hex()
 
     def get_free_call_config(self):
         return self.options['email'], self.options['free_call_auth_token-bin'], self.options[
@@ -169,7 +212,7 @@ class ServiceClient:
 
     def get_service_details(self):
         return self.org_id, self.service_id, self.group["group_id"], \
-               self.service_metadata.get_all_endpoints_for_group(self.group["group_name"])[0]
+            self.service_metadata.get_all_endpoints_for_group(self.group["group_name"])[0]
 
     def get_concurrency_flag(self):
         return self.options.get('concurrency', True)
