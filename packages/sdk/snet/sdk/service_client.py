@@ -164,47 +164,13 @@ class ServiceClient:
 
         return signature
 
-    # Функция для создания подписи
-    def generate_training_signature2(self, text, address,  block_number):
+    def generate_training_signature(self, text: str, address, block_number):
         message = web3.Web3.solidity_keccak(
-            ["string", "uint256"],
-            [text, block_number]
+            ["string", "address", "uint256"],
+            [text, address, block_number]
         )
-        signature = self.sdk_web3.eth.account.signHash(defunct_hash_message(message),
-                                                       self.account.signer_private_key).signature
-
-        # Создание подписи
-        from eth_account.messages import encode_defunct
-        # msghash = encode_defunct(text=text)
-        print("MSG HASH: ", message)
-        print("self.account.signer_private_key: ", self.account.signer_private_key)
-        # signed_msg = Account.sign_message(message, self.account.signer_private_key)
-        # print("signed_msg: ", signed_msg)
-
-        # Получение подписи
-        # self.account.signer_private_key
-        # signed_message = self.sdk_web3.eth.account.sign_message(signed_msg, private_key=self.account.signer_private_key)
-        return signature
-
-    # def generate_training_signature(self, message, block_number, private_key_str: str):
-    #     # Преобразование строки в байты
-    #     private_key_bytes = codecs.decode(private_key_str, 'hex')
-    #
-    #     # Используем кривую secp256k1 (стандартная кривая для Ethereum)
-    #     curve = ecdsa.curves.SECP256k1
-    #
-    #     # Создаем объект приватного ключа
-    #     private_key = ecdsa.SigningKey.from_string(private_key_bytes, curve=curve)
-    #
-    #     message = b"".join([
-    #         message.encode('utf-8'),
-    #         private_key.get_verifying_key().to_string('compressed'),
-    #         block_number.to_bytes(32, byteorder='big')  # Используем 32 байта для номера блока
-    #     ])
-    #     hash_message = hashlib.sha3_256(message).digest()
-    #     signature = private_key.sign_digest(hash_message, sigencode=ecdsa.util.sigencode_der_canonize)
-    #
-    #     return signature, message.hex()
+        return self.sdk_web3.eth.account.signHash(defunct_hash_message(message),
+                                                  self.account.signer_private_key).signature
 
     def get_free_call_config(self):
         return self.options['email'], self.options['free_call_auth_token-bin'], self.options[
